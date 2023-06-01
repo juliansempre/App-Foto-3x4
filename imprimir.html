@@ -1,0 +1,296 @@
+<!DOCTYPE html >
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impressão de Fotos</title>
+  <style>
+    body {
+    font-family: Arial, sans-serif;
+    background-color: white;
+  }
+  .button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.button-container > * {
+  margin-right: 10px;
+}
+
+  h1 {
+    text-align: center;
+  }
+    #canvas {
+      width: 15in;
+      height: 10in;
+      border: 1px solid black;
+      margin: 10px auto;
+      position: absolute;
+      overflow: hidden;
+      text-align: center;
+      transform: scale(0.5);
+      top: -15%;
+      left: 0%;
+    }
+
+    .photo-container {
+    
+      width: 3in;
+      height: 4in;
+      border: 1px solid rgb(201, 201, 201);
+      margin: 25px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: move;
+      overflow: hidden;
+      margin-top: 55px;
+    }
+
+    .photo {
+      max-height: 100%;
+      object-fit: fill;
+      transform-origin: center;
+    }
+
+
+  
+    .row {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .top-row {
+    margin-bottom: 10px;
+  }
+  
+  .bottom-row {
+    margin-top: 10px;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  #saveButton {
+    margin: 10px auto;
+    display: block;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  
+  #saveButton:hover {
+    background-color: #45a049;
+  }
+  label {
+  display: inline-block;
+  margin-top: 10px;
+  margin-right: 10px;
+  text-align: center;
+}
+
+input[type="range"] {
+  width: 150px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+  
+  #fileInput {
+    display: none;
+  }
+  
+  #insertButton {
+    display: block;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  
+  #insertButton:hover {
+    background-color: #0b7dda;
+  }
+  </style>
+</head>
+<body>
+  <h1>Impressão de Foto 3x4</h1>
+  <div class="button-container">
+    <input type="file" id="fileInput">
+    <button id="insertButton">Inserir Foto</button>
+    <button id="saveButton">Salvar em JPG</button>
+    <label for="zoomRange">Zoom:</label>
+    <input type="range" id="zoomRange" min="1" max="5" step="0.1" value="1">
+  
+    <label for="xRange">Mover no eixo X:</label>
+    <input type="range" id="xRange" min="-5" max="5" step="0.01" value="0">
+  
+    <label for="yRange">Mover no eixo Y:</label>
+    <input type="range" id="yRange" min="-5" max="5" step="0.01" value="0">
+  </div>
+  
+  <div id="canvas"></div>
+  <script>
+    var photoIndex = 0;
+
+    document.getElementById("insertButton").addEventListener("click", function() {
+      document.getElementById("fileInput").click();
+    });
+
+    document.getElementById("fileInput").addEventListener("change", function(event) {
+      var file = event.target.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function() {
+          var canvas = document.getElementById("canvas");
+          var topRow = document.createElement('div');
+          topRow.className = 'row top-row';
+          canvas.appendChild(topRow);
+
+          for (var i = 0; i < 4; i++) {
+            var photoContainer = document.createElement('div');
+            photoContainer.className = 'photo-container';
+
+            var photo = document.createElement('img');
+            photo.className = 'photo';
+            photo.src = reader.result;
+
+            photoContainer.appendChild(photo);
+            topRow.appendChild(photoContainer);
+            photoIndex++;
+            if (photoIndex >= 8) {
+              document.getElementById("insertButton").disabled = true;
+            }
+          }
+
+          var bottomRow = document.createElement('div');
+          bottomRow.className = 'row bottom-row';
+          canvas.appendChild(bottomRow);
+
+          for (var i = 0; i < 4; i++) {
+            var photoContainer = document.createElement('div');
+            photoContainer.className = 'photo-container';
+
+            var photo = document.createElement('img');
+            photo.className = 'photo';
+            photo.src = reader.result;
+
+            photoContainer.appendChild(photo);
+            bottomRow.appendChild(photoContainer);
+            photoIndex++;
+            if (photoIndex >= 8) {
+              document.getElementById("insertButton").disabled = true;
+            }
+          }
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById("saveButton").addEventListener("click", function() {
+      html2canvas(document.getElementById("canvas"), { 
+        allowTaint: true,
+        useCORS: true,
+        dpi: window.devicePixelRatio * 300,
+        scale: 3
+      }).then(function(canvas) {
+        var imgData = canvas.toDataURL("image/jpeg", 1.0);
+        var link = document.createElement('a');
+        link.href = imgData;
+        link.download = 'fotos.jpg';
+        link.click();
+      });
+    });
+
+    var activePhoto = null;
+    var initialX = 0;
+    var initialY = 0;
+
+    function handleMouseDown(event) {
+      activePhoto = event.target;
+      initialX = event.clientX;
+      initialY = event.clientY;
+      activePhoto.style.zIndex = "1";
+    }
+
+    function handleMouseMove(event) {
+      if (activePhoto !== null) {
+        var dx = event.clientX - initialX;
+        var dy = event.clientY - initialY;
+        var rect = activePhoto.getBoundingClientRect();
+        activePhoto.style.left = rect.left + dx + "px";
+        activePhoto.style.top = rect.top + dy + "px";
+        initialX = event.clientX;
+        initialY = event.clientY;
+      }
+    }
+
+    function handleMouseUp() {
+      if (activePhoto !== null) {
+        activePhoto.style.zIndex = "0";
+        activePhoto = null;
+      }
+    }
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+
+    var zoomRange = document.getElementById("zoomRange");
+    zoomRange.addEventListener("input", handleZoomChange);
+
+    function handleZoomChange() {
+      var zoomValue = parseFloat(zoomRange.value);
+      var photos = document.getElementsByClassName("photo");
+
+      for (var i = 0; i < photos.length; i++) {
+        var photo = photos[i];
+        photo.style.transform = "scale(" + zoomValue + ")";
+      }
+    }
+
+    var xRange = document.getElementById("xRange");
+    xRange.addEventListener("input", handleXChange);
+
+    function handleXChange() {
+      var xValue = parseInt(xRange.value);
+      var photos = document.getElementsByClassName("photo");
+
+      for (var i = 0; i < photos.length; i++) {
+        var photo = photos[i];
+        photo.style.transform = photo.style.transform + " translateX(" + xValue + "px)";
+      }
+    }
+
+    var yRange = document.getElementById("yRange");
+    yRange.addEventListener("input", handleYChange);
+
+    function handleYChange() {
+      var yValue = parseInt(yRange.value);
+      var photos = document.getElementsByClassName("photo");
+
+      for (var i = 0; i < photos.length; i++) {
+        var photo = photos[i];
+        photo.style.transform = photo.style.transform + " translateY(" + yValue + "px)";
+      }
+    }
+  </script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</body>
+</html>
