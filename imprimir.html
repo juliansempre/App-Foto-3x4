@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impressão de Fotos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: white;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #canvas {
+      width: 15in;
+      height: 10in;
+      border: 1px solid black;
+      margin: 10px auto;
+      position: absolute;
+      overflow: hidden;
+      text-align: center;
+      transform: scale(0.5);
+      top: -15%;
+      left: 0%;
+    }
+
+    .photo-container {
+      width: 3in;
+      height: 4in;
+      border: 1px solid rgb(201, 201, 201);
+      margin: 25px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: move;
+      overflow: hidden;
+      margin-top: 55px;
+    }
+
+    .photo {
+      max-height: 100%;
+      object-fit: fill;
+      transform-origin: center;
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+    }
+
+    .top-row {
+      margin-bottom: 10px;
+    }
+
+    .bottom-row {
+      margin-top: 10px;
+    }
+
+    #saveButton, #insertButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+
+    #insertButton {
+      background-color: #2196f3;
+    }
+
+    #saveButton:hover {
+      background-color: #45a049;
+    }
+
+    #insertButton:hover {
+      background-color: #0b7dda;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    label {
+      display: inline-block;
+      margin-top: 10px;
+      margin-right: 5px;
+      text-align: center;
+    }
+
+    input[type="range"] {
+      width: 150px;
+      vertical-align: middle;
+    }
+
+    button {
+      padding: 5px 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Impressão de Foto 3x4</h1>
+  <div class="button-container">
+    <input type="file" id="fileInput">
+    <button id="insertButton">Inserir Foto</button>
+    <button id="saveButton">Salvar em JPG</button>
+
+    <label for="zoomRange">Zoom:</label>
+    <input type="range" id="zoomRange" min="1" max="5" step="0.1" value="1">
+
+    <label>Eixo X:</label>
+    <button id="moveLeftX">◁</button>
+    <button id="moveRightX">▷</button>
+
+    <label>Eixo Y:</label>
+    <button id="moveDownY">▽</button>
+    <button id="moveUpY">△</button>
+
+  </div>
+
+  <div id="canvas"></div>
+
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script>
+    let photoIndex = 0;
+
+    document.getElementById("insertButton").addEventListener("click", function () {
+      document.getElementById("fileInput").click();
+    });
+
+    document.getElementById("fileInput").addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const canvas = document.getElementById("canvas");
+
+          const topRow = document.createElement('div');
+          topRow.className = 'row top-row';
+          canvas.appendChild(topRow);
+
+          for (let i = 0; i < 4; i++) {
+            const photoContainer = document.createElement('div');
+            photoContainer.className = 'photo-container';
+
+            const photo = document.createElement('img');
+            photo.className = 'photo';
+            photo.src = reader.result;
+
+            photoContainer.appendChild(photo);
+            topRow.appendChild(photoContainer);
+            photoIndex++;
+            if (photoIndex >= 8) {
+              document.getElementById("insertButton").disabled = true;
+            }
+          }
+
+          const bottomRow = document.createElement('div');
+          bottomRow.className = 'row bottom-row';
+          canvas.appendChild(bottomRow);
+
+          for (let i = 0; i < 4; i++) {
+            const photoContainer = document.createElement('div');
+            photoContainer.className = 'photo-container';
+
+            const photo = document.createElement('img');
+            photo.className = 'photo';
+            photo.src = reader.result;
+
+            photoContainer.appendChild(photo);
+            bottomRow.appendChild(photoContainer);
+            photoIndex++;
+            if (photoIndex >= 8) {
+              document.getElementById("insertButton").disabled = true;
+            }
+          }
+
+          updateTransform(); // aplicar transformações iniciais
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById("saveButton").addEventListener("click", function () {
+      html2canvas(document.getElementById("canvas"), {
+        allowTaint: true,
+        useCORS: true,
+        dpi: window.devicePixelRatio * 300,
+        scale: 3
+      }).then(function (canvas) {
+        const imgData = canvas.toDataURL("image/jpeg", 1.0);
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = 'fotos.jpg';
+        link.click();
+      });
+    });
+
+    // Zoom e movimento
+    let translateX = 0;
+    let translateY = 0;
+
+    const zoomRange = document.getElementById("zoomRange");
+    zoomRange.addEventListener("input", updateTransform);
+
+    function updateTransform() {
+      const zoom = parseFloat(zoomRange.value);
+      const photos = document.getElementsByClassName("photo");
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        photo.style.transform = `scale(${zoom}) translate(${translateX}px, ${translateY}px)`;
+      }
+    }
+
+    // Botões de movimentação
+    document.getElementById("moveLeftX").addEventListener("click", function () {
+      translateX -= 5;
+      updateTransform();
+    });
+
+    document.getElementById("moveRightX").addEventListener("click", function () {
+      translateX += 5;
+      updateTransform();
+    });
+
+    document.getElementById("moveUpY").addEventListener("click", function () {
+      translateY -= 5;
+      updateTransform();
+    });
+
+    document.getElementById("moveDownY").addEventListener("click", function () {
+      translateY += 5;
+      updateTransform();
+    });
+
+    // Suporte a movimentação manual com mouse
+    let activePhoto = null;
+    let initialX = 0;
+    let initialY = 0;
+
+    function handleMouseDown(event) {
+      activePhoto = event.target;
+      initialX = event.clientX;
+      initialY = event.clientY;
+      activePhoto.style.zIndex = "1";
+    }
+
+    function handleMouseMove(event) {
+      if (activePhoto !== null) {
+        const dx = event.clientX - initialX;
+        const dy = event.clientY - initialY;
+        const rect = activePhoto.getBoundingClientRect();
+        activePhoto.style.left = rect.left + dx + "px";
+        activePhoto.style.top = rect.top + dy + "px";
+        initialX = event.clientX;
+        initialY = event.clientY;
+      }
+    }
+
+    function handleMouseUp() {
+      if (activePhoto !== null) {
+        activePhoto.style.zIndex = "0";
+        activePhoto = null;
+      }
+    }
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  </script>
+</body>
+</html>
